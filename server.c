@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+int ip, port;
 
 void read_params(char *path)
 {
@@ -9,7 +14,13 @@ void read_params(char *path)
     fscanf(f, "ip=%s\nport=%s", s_ip, s_port);
     if (f)
         fclose(f);
-    printf("%s %s\n", s_ip, s_port);
+    ip = atoi(s_ip);
+    port = atoi(s_port);
+    printf("%d %d\n", ip, port);
+}
+
+void server() {
+    
 }
 
 int main(int argc, char *args[])
