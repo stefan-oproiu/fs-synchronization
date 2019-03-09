@@ -52,9 +52,9 @@ void clientSetup()
 
 int main(int argc, char *argv[])
 {
-	if (argc != 2)
+	if (argc != 3)
     {
-        printf("Usage %s <config_file_path>\n", argv[0]);
+        printf("Usage %s <config_file_path> <root>.\n", argv[0]);
         exit(1);
     }    
     read_params(argv[1]);
