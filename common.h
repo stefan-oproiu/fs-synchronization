@@ -1,3 +1,7 @@
+#include <errno.h>
+#include <dirent.h>
+#include <sys/stat.h>
+
 void read_params(char *path)
 {
     FILE *f = fopen(path, "r");
@@ -35,7 +39,6 @@ void getAllFilesPaths(char *path)
         your code
         
     */
-   strcpy(paths[paths_count++], your_path);
 }
 
 fm *own_files;
@@ -45,10 +48,24 @@ void getAllFilesMetadata()
     own_files = (fm *)malloc(paths_count * sizeof(fm));
     //pentru fiecare path din paths, creaza un nou obiect file_metadata,
     //populeaza-l cu date apeland lstat SI adauga-l la own_files_metadata
-
-    /*
-        your code
-    */
+    
+    int i;
+    for(i = 0; i < paths_count; i++)
+    {
+        strcpy(own_files[i].path, paths[i]);
+        struct stat s;
+        stat(own_files[i].path, &s);
+        own_files[i].size = s.st_size;
+        own_files[i].timestamp = s.st_mtime;
+        if(S_ISDIR(s.st_mode))
+        {
+            own_files[i].is_regular_file = 0;
+        }
+        else
+        {
+            own_files[i].is_regular_file = 1;
+        }
+    }
 
 }
 
