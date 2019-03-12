@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 void read_params(char *path)
 {
@@ -21,24 +22,101 @@ typedef struct file_metadata
 {
     char path[255];
     unsigned int size;
-    unsigned int timestamp;
+    unsigned long timestamp;
     short is_regular_file; // 1 if regular file; 0 if directory
 } fm;
 
 int paths_count = 0;
-char paths[255][255];
+char paths[1024][PATH_MAX];
 
-
-void getAllFilesPaths(char *path)
+void displayError(char *msg)
 {
-    //parcurge recursiv arborele de fisiere
-    //cand ajunge la o frunza (fisier sau director gol) citeste-i calea absoluta
-    //pune-o in vectorul de string-uri "paths" si incrementeaza paths_count
 
-    /*
-        your code
-        
-    */
+    fprintf(stderr, "%s:%s\n", msg, strerror(errno));
+    exit(errno);
+}
+
+int isEmptyDirectory(char *dirPath)
+{
+    char cmd[1024];
+    int status, exitcode;
+    snprintf(cmd, 1024, "test $(ls -A \"%s\" 2>/dev/null | wc -l) -ne 0", dirPath);
+
+    status = system(cmd);
+    exitcode = WEXITSTATUS(status);
+
+    return exitcode;
+}
+
+void getFilesPaths(char *dirPath, int length)
+{
+    DIR *dir;
+    struct dirent *in;
+    char *name;
+    struct stat info;
+    char cale[PATH_MAX], cale_link[PATH_MAX + 1];
+    int n;
+
+    char errorMessage[PATH_MAX + 100];
+
+    if (!(dir = opendir(dirPath)))
+    {
+        snprintf(errorMessage, sizeof(errorMessage), "Error while openning directory:%s\n", dirPath);
+        displayError(errorMessage);
+    }
+
+    errno = 0;
+    while ((in = readdir(dir)) > 0)
+    {
+
+        name = in->d_name;
+
+        if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+            continue;
+
+        snprintf(cale, sizeof(cale), "%s/%s", dirPath, name);
+
+        if (lstat(cale, &info) < 0)
+        {
+            snprintf(errorMessage, sizeof(errorMessage), "Error at lstat:%s\n", cale);
+            displayError(errorMessage);
+        }
+
+        if (S_ISDIR(info.st_mode))
+        {
+            if (isEmptyDirectory(cale))
+            {
+
+                strcpy(paths[paths_count++], cale + length);
+            }
+            else
+            {
+                getFilesPaths(cale, length);
+            }
+        }
+        else
+        {
+            strcpy(paths[paths_count++], cale + length);
+        }
+    }
+
+    if (errno)
+    {
+        snprintf(errorMessage, sizeof(errorMessage), "Error reading directory:%s\n", dirPath);
+        displayError(errorMessage);
+    }
+
+    if (closedir(dir))
+    {
+        snprintf(errorMessage, sizeof(errorMessage), "Error closing directory:%s\n", dirPath);
+        displayError(errorMessage);
+    }
+}
+
+void getAllFilesPaths(char *dirPath)
+{
+    getFilesPaths(dirPath, strlen(dirPath) + 1);
+    strcpy(paths[paths_count], "");
 }
 
 fm *own_files;
@@ -66,33 +144,4 @@ void getAllFilesMetadata()
             own_files[i].is_regular_file = 1;
         }
     }
-
-}
-
-fm *files_to_delete;
-int files_to_delete_count = 0;
-
-void getFilesToDelete(fm *server_files, int server_files_count)
-{
-    //vrem sa le returnam doar pe cele care se gasesc pe client si nu se gasesc pe server
-    //mijlocul de comparatie este campul "path" din structura file_metadata
-
-    /*
-        your code
-    */
-}
-
-fm *files_to_update;
-int files_to_update_count = 0;
-
-void getFilesToUpdate(fm *server_files, int server_files_count)
-{
-    //vrem sa returnam file_metadata[] de pe client care difera de cele de pe server
-    //la cel putin una din urmatoarele categorii
-    //fm->size SAU fm->timestamp SAU fisierul e pe server si NU e pe client
-
-    /*
-        your code
-    */
-
 }

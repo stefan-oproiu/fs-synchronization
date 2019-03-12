@@ -14,6 +14,7 @@ int sockfd;
 struct sockaddr_in server_address;
 
 #include "common.h"
+#include "client.h"
 
 void sendMessage()
 {
