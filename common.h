@@ -121,27 +121,33 @@ void getAllFilesPaths(char *dirPath)
 
 fm *own_files;
 
-void getAllFilesMetadata()
+void getAllFilesMetadata(char *root)
 {
     own_files = (fm *)malloc(paths_count * sizeof(fm));
     //pentru fiecare path din paths, creaza un nou obiect file_metadata,
     //populeaza-l cu date apeland lstat SI adauga-l la own_files_metadata
-    
+
     int i;
-    for(i = 0; i < paths_count; i++)
+    for (i = 0; i < paths_count; i++)
     {
+        char *fullpath = (char *)malloc(strlen(root) + strlen(paths[i]) + 1);
+        snprintf(fullpath, strlen(root) + strlen(paths[i]), "%s/%s", root, paths[i]);
         strcpy(own_files[i].path, paths[i]);
         struct stat s;
-        stat(own_files[i].path, &s);
+        stat(fullpath, &s);
         own_files[i].size = s.st_size;
         own_files[i].timestamp = s.st_mtime;
-        if(S_ISDIR(s.st_mode))
+        if (S_ISDIR(s.st_mode))
         {
             own_files[i].is_regular_file = 0;
         }
         else
         {
             own_files[i].is_regular_file = 1;
+        }
+        if (fullpath)
+        {
+            free(fullpath);
         }
     }
 }
