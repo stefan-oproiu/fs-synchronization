@@ -1,63 +1,63 @@
-fm *ftd;
-int fdc = 0;
+fm *files_to_delete;
+fm *files_to_update;
 
-void getFilesToDelete(fm *sf, int sfc)
+int ftu_count;
+int ftd_count;
+
+void getFilesToDelete(fm *server_files, int sf_count)
 {
-    //vrem sa le returnam doar pe cele care se gasesc pe client si nu se gasesc pe server
-    //mijlocul de comparatie este campul "path" din structura file_metadata
-
-    ftd = (fm *)malloc(sizeof(fm));
     int i, j;
+    files_to_delete = (fm *) malloc(sizeof(fm));
+    
     for (i = 0; i < paths_count; i++)
     {
         int toDelete = 1;
-        for (j = 0; j < sfc; j++)
+
+        for (j = 0; j < sf_count; j++)
         {
-            if (strcmp(own_files[i].path, sf[j].path) == 0)
+            if (!strcmp(own_files[i].path, server_files[j].path))
             {
                 toDelete = 0;
                 break;
             }
         }
+
         if (toDelete)
         {
-            ftd = (fm *)realloc(ftd, sizeof(fm) * (++fdc));
-            ftd[fdc - 1] = own_files[i];
+            files_to_delete = (fm *) realloc(files_to_delete, sizeof(fm) * (++ftd_count));
+            files_to_delete[ftd_count - 1] = own_files[i];
         }
     }
 }
 
-fm *ftu;
-int ftuc = 0;
-
-void getFilesToUpdate(fm *sf, int sfc)
+void getFilesToUpdate(fm *server_files, int sf_count)
 {
-    //vrem sa returnam file_metadata[] de pe client care difera de cele de pe server
-    //la cel putin una din urmatoarele categorii
-    //fm->size SAU fm->timestamp SAU fisierul e pe server si NU e pe client
-
-    ftu = (fm *)malloc(sizeof(fm));
     int i, j;
-    for (i = 0; i < sfc; i++)
+    files_to_update = (fm *) malloc(sizeof(fm));
+
+    for (i = 0; i < sf_count; i++)
     {
         int different = 0;
         int found = 0;
-        for (j = 0; j < ftuc; j++)
+
+        for (j = 0; j < ftu_count; j++)
         {
-            if (!strcmp(sf[i].path, ftu[j].path))
+            if (!strcmp(server_files[i].path, files_to_update[j].path))
             {
-                if (sf[i].size != ftu[j].size || sf[i].timestamp != ftu[j].timestamp || sf[i].is_regular_file != ftu[j].is_regular_file)
+                found = 1;
+
+                if (server_files[i].size != files_to_update[j].size || server_files[i].timestamp != files_to_update[j].timestamp || server_files[i].is_regular_file != files_to_update[j].is_regular_file)
                 {
                     different = 1;
                     break;
                 }
-                found = 1;
             }
         }
+
         if (different || !found)
         {
-            ftu = (fm *)realloc(ftu, sizeof(fm) * (++ftuc));
-            ftu[ftuc-1] = sf[i];
+            files_to_update = (fm *) realloc(files_to_update, sizeof(fm) * (++ftu_count));
+            files_to_update[ftu_count - 1] = server_files[i];
         } 
     }
 }
