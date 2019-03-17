@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 
 
 #include "../Common/common.h"
@@ -39,8 +40,10 @@ void handleRequest(int connectionFileDescriptor) {
 
     FileMetadata *filesToUpdate;
 
-    // Tell the client first how many files are on the server
-
+    /*
+       Telling the client how many files are ready to be synchronized.
+       Then sending their files to check which of them needs sync.
+    */
     snprintf(buff, 10, "%d", pathsCount);
 
     if (write(connectionFileDescriptor, buff, 10) < 0) {
@@ -57,6 +60,9 @@ void handleRequest(int connectionFileDescriptor) {
 
     }
 
+    /*
+       Receiving the number of files that need updated on clients' computer.
+    */
     n = read(connectionFileDescriptor, buff, 10);
     if (n < 0) {
         snprintf(errorMessage, sizeof(errorMessage), "\nError while reading from connectionFileDescriptor");
@@ -70,10 +76,17 @@ void handleRequest(int connectionFileDescriptor) {
         printf("[debug - server]: client needs %d files updated.\n", filesToUpdateCount);
     #endif
 
+    /*
+       Allocate enough memory for the files.
+    */
     if ((filesToUpdate = (FileMetadata *) malloc(filesToUpdateCount * sizeof(FileMetadata))) == NULL) {
         snprintf(errorMessage, sizeof(errorMessage), "\nError while allocating memory to filesToUpdate :\n");
         displayError(errorMessage);
     }
+
+    /*
+         Store the files into an array.
+    */
 
     for (int i = 0; i < filesToUpdateCount; i++) {
         n = read(connectionFileDescriptor, buff, PATH_MAX);
@@ -90,18 +103,16 @@ void handleRequest(int connectionFileDescriptor) {
         filesToUpdate[i] = ownFiles[getPathIndex(buff)];
     }
 
+    /*
+       Building absolute path + transfer non-updated files to the client.
+    */
     for (int i = 0; i < filesToUpdateCount; i++) {
         snprintf(newPath, PATH_MAX, "%s/%s", root, filesToUpdate[i].path);
 
         #if defined DEBUG_MODE
              printf("[debug - server]: file '%s' is updating to client.\n", newPath);
         #endif
-        snprintf(buff, 48, "%lu %lu", filesToUpdate[i].size, filesToUpdate[i].timeStamp);
 
-        if(write(connectionFileDescriptor, buff, 48)<0){
-            snprintf(errorMessage, sizeof(errorMessage), "\nError while writing filesToUpdate stuff");
-            displayError(errorMessage);
-        }
 
         if (filesToUpdate[i].isRegularFile) // is not a directory
         {
@@ -147,24 +158,28 @@ void handleRequest(int connectionFileDescriptor) {
         }
     }
 
-    if(close(connectionFileDescriptor)<0){
-        snprintf(errorMessage, sizeof(errorMessage), "\nError while closing connection file descriptor");
-        displayError(errorMessage);
-    }
+//    if(close(connectionFileDescriptor)<0){
+//        snprintf(errorMessage, sizeof(errorMessage), "\nError while closing connection file descriptor");
+//        displayError(errorMessage);
+//    }
     exit(0);
 }
 
 void acc() {
+    int connfd;
+    pid_t wpid, pid;
+    int status;
+
     len = sizeof(remoteAddress);
 
-    int connectionFileDescriptor = accept(socketFileDescriptor, (struct sockaddr *) &remoteAddress, &len);
-    pid_t pid;
+    while ((connfd = accept(socketFileDescriptor, (struct sockaddr *) &remoteAddress, &len)) >= 0)
+    {
+        if ((pid = fork()) == 0)
+            handleRequest(connfd);
 
-    if ((pid = fork()) == 0) {
-        printf("pid %d\n", getpid());
-        handleRequest(connectionFileDescriptor);
-    } else {
-        acc();
+        close(connfd);
+
+        while ((wpid = wait(&status)) > 0);
     }
 }
 
