@@ -19,69 +19,6 @@ int sockfd;
 struct sockaddr_in server_address;
 char *root;
 
-char *formatdate(time_t val)
-{
-	char *str;
-
-	if ((str = (char *) malloc(48)) == NULL)
-		displayError("malloc() error.");
-
-    strftime(str, 48, "%Y%m%d%H%M.%S", localtime(&val));
-    return str;	
-}
-
-int adjustTimestamp(char *filepath, char *timestamp)
-{
-	char cmd[PATH_MAX + 32];
-    int status, exitcode;
-
-    snprintf(cmd, sizeof(cmd), "touch -a -m -t %s \"%s\"", timestamp, filepath);
-
-    status = system(cmd);
-    exitcode = WEXITSTATUS(status);
-
-    return exitcode;
-}
-
-int getIndexFromServerFiles(fm *server_files, int count, char *path)
-{
-	int i;
-
-	for (i = 0; i < count; i++)
-	{
-		if (!strcmp(server_files[i].path, path))
-			return i;
-	}
-
-	return -1;
-}
-
-int removedir(char *dirpath)
-{
-	char cmd[PATH_MAX + 64];
-	int status, exitcode;
-
-    snprintf(cmd, sizeof(cmd), "rm -rf \"%s\"", dirpath);
-
-    status = system(cmd);
-    exitcode = WEXITSTATUS(status);
-
-    return exitcode;
-}
-
-int removefile(char *path)
-{
-	char cmd[PATH_MAX + 64];
-	int status, exitcode;
-
-    snprintf(cmd, sizeof(cmd), "rm \"%s\"", path);
-
-    status = system(cmd);
-    exitcode = WEXITSTATUS(status);
-
-    return exitcode;
-}
-
 void handle()
 {
 	char buff[1024];
@@ -282,10 +219,7 @@ int main(int argc, char *argv[])
     } 
 
     if (argv[2][strlen(argv[2]) - 1] == '/')
-    {
-    	printf("[ERROR]: Root shouldn't end with the '/' character.\n");
-    	exit(1);
-    }
+    	argv[2][strlen(argv[2]) - 1] = 0;
 
     read_params(argv[1]);
 
