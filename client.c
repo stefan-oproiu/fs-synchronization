@@ -233,7 +233,7 @@ void handle()
 		}
 		else // is a file, remove it
 		{
-			if (strlen(newpath) != strlen(root) + strlen(files_to_delete[i].path) + 1)
+			if (strlen(newpath) == strlen(root) + strlen(files_to_delete[i].path) + 1)
 				removefile(newpath);
 		}
 
