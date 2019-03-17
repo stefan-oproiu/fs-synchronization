@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -35,13 +36,23 @@ void handleRequest(int connfd)
 
     fm *files_to_update;
 
-    // Tell the client first how many files are on the server
+    getAllFilesPaths(root);
+    getAllFilesMetadata(root);
+
+    /*
+    * Telling the client how many files are ready to be synchronized.
+    * Then sending their files to check which of them needs sync.
+    */
 
     snprintf(buff, 10, "%d", paths_count);
 	write(connfd, buff, 10);
 
 	for (i = 0; i < paths_count; i++)
 		write(connfd, &own_files[i], sizeof(fm));
+
+    /*
+    * Receiving the number of files that need updated on clients' computer.
+    */
 
     r = read(connfd, buff, 10);
     buff[r] = 0;
@@ -52,8 +63,16 @@ void handleRequest(int connfd)
         printf("[debug - server]: client needs %d files updated.\n", files_to_update_cnt);
     #endif
 
+    /*
+    * Allocate enough memory for the files.
+    */
+
     if ((files_to_update = (fm *) malloc(files_to_update_cnt * sizeof(fm))) == NULL)
         displayError("malloc error.");
+
+    /*
+    * Store the files into an array.
+    */
 
     for (i = 0; i < files_to_update_cnt; i++)
     {
@@ -67,6 +86,10 @@ void handleRequest(int connfd)
         files_to_update[i] = own_files[getPathIndex(buff)];
     }
 
+    /*
+    * Building absolute path + transfer non-updated files to the client.
+    */
+
     for (i = 0; i < files_to_update_cnt; i++)
     {
         snprintf(newpath, PATH_MAX, "%s/%s", root, files_to_update[i].path);
@@ -74,9 +97,6 @@ void handleRequest(int connfd)
         #if defined DEBUG_MODE
             printf("[debug - server]: file '%s' is updating to client.\n", newpath);
         #endif
-
-        snprintf(buff, 48, "%lu %lu", files_to_update[i].size, files_to_update[i].timestamp);
-        write(connfd, buff, 48);
 
         if (files_to_update[i].is_regular_file) // is not a directory
         {
@@ -106,25 +126,25 @@ void handleRequest(int connfd)
         }
     }
 
-    close(connfd);
     exit(0);
 }
 
 void acc()
 {
+    int connfd;
+    pid_t wpid, pid;
+    int status;
+
     len = sizeof(remote_address);
 
-    int connfd = accept(sockfd, (struct sockaddr *) &remote_address, &len);
-    pid_t pid;
+    while ((connfd = accept(sockfd, (struct sockaddr *) &remote_address, &len)) >= 0)
+    {
+        if ((pid = fork()) == 0)
+            handleRequest(connfd);
 
-    if ((pid = fork()) == 0) 
-    {
-        printf("pid %d\n", getpid());
-        handleRequest(connfd);
-    }
-    else
-    {
-        acc();
+        close(connfd);
+
+        while ((wpid = wait(&status)) > 0);
     }
 }
 
@@ -146,10 +166,6 @@ void serverSetup()
     }
 
     listen(sockfd, 5);
-
-    getAllFilesPaths(root);
-    getAllFilesMetadata(root);
-
     acc();
 }
 

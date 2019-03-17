@@ -40,13 +40,12 @@ void getFilesToUpdate(fm *server_files, int sf_count)
         int different = 0;
         int found = 0;
 
-        for (j = 0; j < ftu_count; j++)
+        for (j = 0; j < paths_count; j++)
         {
-            if (!strcmp(server_files[i].path, files_to_update[j].path))
+            if (!strcmp(server_files[i].path, own_files[j].path))
             {
                 found = 1;
-
-                if (server_files[i].size != files_to_update[j].size || server_files[i].timestamp != files_to_update[j].timestamp || server_files[i].is_regular_file != files_to_update[j].is_regular_file)
+                if (server_files[i].size != own_files[j].size || server_files[i].timestamp != own_files[j].timestamp || server_files[i].is_regular_file != own_files[j].is_regular_file)
                 {
                     different = 1;
                     break;

@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 #include "common.h"
 #include "client.h"
@@ -18,31 +19,81 @@ int sockfd;
 struct sockaddr_in server_address;
 char *root;
 
-void sendMessage()
+char *formatdate(time_t val)
 {
-	char buff[1024];
-	sprintf(buff, "test message.");
+	char *str;
 
-	write(sockfd, buff, strlen(buff));
-	buff[0] = 0;
+	if ((str = (char *) malloc(48)) == NULL)
+		displayError("malloc() error.");
 
-	int r;
-	r = read(sockfd, buff, sizeof(buff));
-	buff[r] = 0;
+    strftime(str, 48, "%Y%m%d%H%M.%S", localtime(&val));
+    return str;	
+}
 
-	if (r)
-		fprintf(stdout, "%s\n", buff);
+int adjustTimestamp(char *filepath, char *timestamp)
+{
+	char cmd[PATH_MAX + 32];
+    int status, exitcode;
+
+    snprintf(cmd, sizeof(cmd), "touch -a -m -t %s \"%s\"", timestamp, filepath);
+
+    status = system(cmd);
+    exitcode = WEXITSTATUS(status);
+
+    return exitcode;
+}
+
+int getIndexFromServerFiles(fm *server_files, int count, char *path)
+{
+	int i;
+
+	for (i = 0; i < count; i++)
+	{
+		if (!strcmp(server_files[i].path, path))
+			return i;
+	}
+
+	return -1;
+}
+
+int removedir(char *dirpath)
+{
+	char cmd[PATH_MAX + 64];
+	int status, exitcode;
+
+    snprintf(cmd, sizeof(cmd), "rm -rf \"%s\"", dirpath);
+
+    status = system(cmd);
+    exitcode = WEXITSTATUS(status);
+
+    return exitcode;
+}
+
+int removefile(char *path)
+{
+	char cmd[PATH_MAX + 64];
+	int status, exitcode;
+
+    snprintf(cmd, sizeof(cmd), "rm \"%s\"", path);
+
+    status = system(cmd);
+    exitcode = WEXITSTATUS(status);
+
+    return exitcode;
 }
 
 void handle()
 {
 	char buff[1024];
 	char newpath[PATH_MAX];
+	int server_files_count;
+	int r = 0, i, size;
 
 	fm *server_files;
 
-	int server_files_count;
-	int r = 0, i, size;
+	/*
+	* Receiving files count from the server.
+	*/
 
 	r = read(sockfd, buff, 10);
 	buff[r] = 0;
@@ -53,13 +104,30 @@ void handle()
 		printf("[debug - client]: server tells that are %d files there\n", server_files_count);
 	#endif
 
+	/*
+	* Allocate memory for the server files to check if there are outdated/files that need to be deleted.
+	*/
+
 	if ((server_files = (fm *) malloc(server_files_count * sizeof(fm))) == NULL)
 		displayError("malloc error.");
+
+	/*
+	* Reading them from the socket.
+	*/
 
 	for (i = 0; i < server_files_count; i++)
 		read(sockfd, &server_files[i], sizeof(fm));
 
+	/*
+	* Getting files that need to be updated/deleted.
+	*/
+
 	getFilesToUpdate(server_files, server_files_count);
+	getFilesToDelete(server_files, server_files_count);
+
+	/*
+	* Telling the server how many files need updated by the client.
+	*/
 
 	#if defined DEBUG_MODE
 		printf("[debug - client]: %d files need updated/added\n", ftu_count);
@@ -77,11 +145,18 @@ void handle()
 		write(sockfd, files_to_update[i].path, PATH_MAX);
 	}
 
+	/*
+	* Updating the files from the server.
+	*/
+
 	for (i = 0; i < ftu_count; i++)
 	{
 		int idx;
-		unsigned int size;
-		unsigned long timestamp;
+		int serverFileIdx = getIndexFromServerFiles(server_files, server_files_count, files_to_update[i].path);
+
+		/*
+		* Building the absolute path.
+		*/
 
 		snprintf(newpath, PATH_MAX, "%s/%s", root, files_to_update[i].path);
 
@@ -89,18 +164,13 @@ void handle()
 			printf("[debug - client]: file '%s' is being updated.\n", newpath);
 		#endif
 
-		r = read(sockfd, buff, 48);
-		buff[r] = 0;
-
-		//printf("[debug] buff=%s\n", buff);
-
 		if (!files_to_update[i].is_regular_file) // is a directory
 		{
 			mkdir(newpath, ACCESSPERMS);
 		}
 		else // is a file, get data from socket and write into it
 		{
-			int fd = open(newpath, O_CREAT | O_TRUNC | O_WRONLY, 0755);
+			int fd = open(newpath, O_CREAT | O_TRUNC | O_WRONLY, 0744);
 			off_t size;
 
 			if (fd < 0)
@@ -116,21 +186,67 @@ void handle()
 				displayError("close() error.");
 		}
 
+		char *date = formatdate(server_files[serverFileIdx].timestamp);
+		adjustTimestamp(newpath, date);
+
+		#if defined DEBUG_MODE
+			printf("[debug - client]: timestamp=%s for file %s\n", date, files_to_update[i].path);
+		#endif
+
 		if ((idx = getPathIndex(newpath)) == -1) // file/dir does not exists in the list => add it
 		{
 			strcpy(own_files[paths_count].path, newpath);
-			own_files[paths_count].size = size;
-			own_files[paths_count].timestamp = timestamp;
+
+			own_files[paths_count].size = server_files[serverFileIdx].size;
+			own_files[paths_count].timestamp = server_files[serverFileIdx].timestamp;
+
 			paths_count ++;
 		}
 		else // update its stats
 		{
-			own_files[paths_count].size = size;
-			own_files[paths_count].timestamp = timestamp;
+			own_files[idx].size = server_files[serverFileIdx].size;
+			own_files[idx].timestamp = server_files[serverFileIdx].timestamp;
 		}
 
 		#if defined DEBUG_MODE
 			printf("[debug - client]: file '%s' successfully updated.\n", newpath);
+		#endif
+	}
+
+	/*
+	* Deleting the files that are on the clients' machine but not on the server.
+	*/
+
+	for (i = 0; i < ftd_count; i++)
+	{
+		int idx, j;
+
+		snprintf(newpath, PATH_MAX, "%s/%s", root, files_to_delete[i].path);
+
+		#if defined DEBUG_MODE
+			printf("[debug - client]: file '%s' is being deleted.\n", newpath);
+		#endif
+
+		if (!files_to_delete[i].is_regular_file) // is a directory
+		{
+			removedir(newpath);
+		}
+		else // is a file, remove it
+		{
+			if (strlen(newpath) != strlen(root) + strlen(files_to_delete[i].path) + 1)
+				removefile(newpath);
+		}
+
+		if ((idx = getPathIndex(newpath)) != -1)
+		{
+			for (j = idx; j < paths_count - 1; j++)
+				own_files[j] = own_files[j + 1];
+
+			paths_count --;
+		}
+
+		#if defined DEBUG_MODE
+			printf("[debug - client]: file '%s' successfully deleted.\n", newpath);
 		#endif
 	}
 }
