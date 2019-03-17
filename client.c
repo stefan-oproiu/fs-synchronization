@@ -79,11 +79,20 @@ void handle()
 
 	for (i = 0; i < ftu_count; i++)
 	{
+		int idx;
+		unsigned int size;
+		unsigned long timestamp;
+
 		snprintf(newpath, PATH_MAX, "%s/%s", root, files_to_update[i].path);
 
 		#if defined DEBUG_MODE
 			printf("[debug - client]: file '%s' is being updated.\n", newpath);
 		#endif
+
+		r = read(sockfd, buff, 48);
+		buff[r] = 0;
+
+		//printf("[debug] buff=%s\n", buff);
 
 		if (!files_to_update[i].is_regular_file) // is a directory
 		{
@@ -91,37 +100,38 @@ void handle()
 		}
 		else // is a file, get data from socket and write into it
 		{
-			int fd = open(newpath, O_WRONLY | O_CREAT | O_TRUNC, 0755);
-			int idx;
+			int fd = open(newpath, O_CREAT | O_TRUNC | O_WRONLY, 0755);
+			off_t size;
 
-			if (fd == -1)
+			if (fd < 0)
 				displayError("open() error.");
 
-			while ((r = read(sockfd, buff, 128)))
-			{
-				buff[r] = '\0';
-				printf("[debug - client]: buff=%s\n", buff);
-				write(fd, buff, r);
-			}
+			read(sockfd, buff, 12);
+			size = strtol(buff, NULL, 10);
 
-			if (close(fd) == -1)
+			read(sockfd, buff, size);
+			write(fd, buff, size);
+
+			if (close(fd) < 0)
 				displayError("close() error.");
-
-			#if defined DEBUG_MODE
-				printf("[debug - client]: file '%s' successfully updated.\n", newpath);
-			#endif
-
-			if ((idx = getPathIndex(newpath)) == -1) // file does not exists in the list => add it
-			{
-				strcpy(own_files[paths_count].path, newpath);
-				//own_files[paths_count].size = ...;
-				paths_count ++;
-			}
-			else // update its stats
-			{
-
-			}
 		}
+
+		if ((idx = getPathIndex(newpath)) == -1) // file/dir does not exists in the list => add it
+		{
+			strcpy(own_files[paths_count].path, newpath);
+			own_files[paths_count].size = size;
+			own_files[paths_count].timestamp = timestamp;
+			paths_count ++;
+		}
+		else // update its stats
+		{
+			own_files[paths_count].size = size;
+			own_files[paths_count].timestamp = timestamp;
+		}
+
+		#if defined DEBUG_MODE
+			printf("[debug - client]: file '%s' successfully updated.\n", newpath);
+		#endif
 	}
 }
 

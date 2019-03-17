@@ -17,6 +17,16 @@ socklen_t len;
 
 char *root;
 
+off_t getFileSize(char *path)
+{
+    struct stat st;
+
+    if (lstat(path, &st) < 0)
+        displayError("lstat() error.");
+
+    return st.st_size;
+}
+
 void handleRequest(int connfd)
 {
     char buff[PATH_MAX], newpath[PATH_MAX];
@@ -65,20 +75,30 @@ void handleRequest(int connfd)
             printf("[debug - server]: file '%s' is updating to client.\n", newpath);
         #endif
 
+        snprintf(buff, 48, "%lu %lu", files_to_update[i].size, files_to_update[i].timestamp);
+        write(connfd, buff, 48);
+
         if (files_to_update[i].is_regular_file) // is not a directory
         {
-            int fd = open(newpath, O_RDONLY);
+            int fd;
 
-            if (fd == -1)
+            if ((fd = open(newpath, O_RDONLY)) == -1)
                 displayError("open() error.");
 
-            while ((r = read(fd, buff, 128)))
-            {
-                buff[r] = 0;
-                write(connfd, buff, r);
-            }
+            off_t size = getFileSize(newpath);
 
-            close(fd);
+            #if defined DEBUG_MODE
+                printf("[debug - server]: file '%s', size=%ld\n", newpath, size);
+            #endif
+
+            snprintf(buff, 12, "%ld", size);
+            write(connfd, buff, 12);
+
+            read(fd, buff, size);
+            write(connfd, buff, size);
+
+            if (close(fd) < 0)
+                displayError("close() error.");
 
             #if defined DEBUG_MODE
                 printf("[debug - server]: file '%s' successfully updated.\n", files_to_update[i].path);
