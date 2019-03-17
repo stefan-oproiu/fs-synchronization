@@ -148,6 +148,9 @@ void handle()
 		#if defined DEBUG_MODE
 			printf("[debug - client]: file '%s' successfully updated.\n", newpath);
 		#endif
+
+		if (date)
+    		free(date);
 	}
 
 	/*
@@ -186,6 +189,9 @@ void handle()
 			printf("[debug - client]: file '%s' successfully deleted.\n", newpath);
 		#endif
 	}
+
+	if (server_files)
+		free(server_files);
 }
 
 void clientSetup()
@@ -225,6 +231,15 @@ int main(int argc, char *argv[])
 
     root = argv[2];
     clientSetup();
+
+    if (files_to_delete)
+    	free(files_to_delete);
+
+    if (files_to_update)
+    	free(files_to_update);
+
+    if (own_files)
+        free(own_files);
 
     return 0;
 }

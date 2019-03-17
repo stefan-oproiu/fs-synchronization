@@ -123,6 +123,9 @@ void handleRequest(int connfd)
         }
     }
 
+    if (files_to_update)
+        free(files_to_update);
+
     exit(0);
 }
 
@@ -182,6 +185,9 @@ int main(int argc, char *args[])
     read_params(args[1]);
     root = args[2];
     serverSetup();
+
+    if (own_files)
+        free(own_files);
 
     return 0;
 }
