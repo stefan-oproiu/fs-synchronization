@@ -3,6 +3,10 @@
 
 #include "../Common/common.h"
 
+#ifndef ACCESSPERMS
+#define ACCESSPERMS(S_IRWXU | S_IRWXG | S_IRWXO
+#endif
+
 FileMetadata *filesToDelete;
 FileMetadata *filesToUpdate;
 

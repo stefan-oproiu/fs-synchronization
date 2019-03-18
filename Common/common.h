@@ -14,7 +14,7 @@ typedef struct FileMetadata {
 
 } FileMetadata;
 
-int pathsCount = 0;
+extern int pathsCount ;
 char paths[1024][PATH_MAX];
 
 FileMetadata *ownFiles;

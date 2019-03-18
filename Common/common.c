@@ -7,6 +7,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+int pathsCount=0;
+
 void displayError(char *msg) {
 
     fprintf(stderr, "%s:%s\n", msg, strerror(errno));
