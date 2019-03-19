@@ -30,12 +30,9 @@ off_t getFileSize(char *path)
 
 void handleRequest(int connfd)
 {
-    char buff[4096], newpath[PATH_MAX];
+    char buff[PATH_MAX], newpath[PATH_MAX];
     int r, i;
     int files_to_update_cnt;
-
-    getAllFilesPaths(root);
-    getAllFilesMetadata(root);
 
     fm *files_to_update;
 
@@ -47,14 +44,9 @@ void handleRequest(int connfd)
     snprintf(buff, 10, "%d", paths_count);
 	write(connfd, buff, 10);
 
-    
-	for (i = 0; i < paths_count; i++) 
-    {
+	for (i = 0; i < paths_count; i++)
 		write(connfd, &own_files[i], sizeof(fm));
-        //printf("%s %d\n", own_files[i].path, own_files[i].size);
-    }
-    
-    exit(0);
+
     /*
     * Receiving the number of files that need updated on clients' computer.
     */
@@ -119,9 +111,34 @@ void handleRequest(int connfd)
             snprintf(buff, 12, "%ld", size);
             write(connfd, buff, 12);
 
-            read(fd, buff, size);
-            write(connfd, buff, size);
+            if (size < BUFF_SIZE)
+            {
+            	read(fd, buff, size);
+            	write(connfd, buff, size);
+            }
+            else
+            {
+            	int remains = size % BUFF_SIZE;
+            	int data_sent = 0;
 
+            	#if defined DEBUG_MODE
+					printf("[debug - server]: file '%s', size=%d, remains=%d\n", newpath, size, remains);
+				#endif
+
+            	while (data_sent < size - remains)
+            	{
+            		read(fd, buff, BUFF_SIZE);
+            		write(connfd, buff, BUFF_SIZE);
+
+            		data_sent += BUFF_SIZE;
+            	}
+
+            	if (remains)
+            	{
+            		read(fd, buff, remains);
+            		write(connfd, buff, remains);
+            	}
+            }
             if (close(fd) < 0)
                 displayError("close() error.");
 
@@ -172,6 +189,9 @@ void serverSetup()
         printf("binding failed\n");
         exit(EXIT_FAILURE);
     }
+
+    getAllFilesPaths(root);
+    getAllFilesMetadata(root);
 
     listen(sockfd, 5);
     acc();

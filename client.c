@@ -26,7 +26,7 @@ void handle()
 	int server_files_count;
 	int r = 0, i, size;
 
-	fm *server_files;
+	fm *server_files = NULL;
 
 	/*
 	* Receiving files count from the server.
@@ -53,18 +53,14 @@ void handle()
 	*/
 
 	for (i = 0; i < server_files_count; i++)
-	{
 		read(sockfd, &server_files[i], sizeof(fm));
-		printf("%s\n", server_files[i].path);
-	}
-	exit(0);
+
 	/*
 	* Getting files that need to be updated/deleted.
 	*/
 
 	getFilesToUpdate(server_files, server_files_count);
 	getFilesToDelete(server_files, server_files_count);
-	getDirectoriesToCreate(server_files, server_files_count);
 
 	/*
 	* Telling the server how many files need updated by the client.
@@ -120,8 +116,34 @@ void handle()
 			read(sockfd, buff, 12);
 			size = strtol(buff, NULL, 10);
 
-			read(sockfd, buff, size);
-			write(fd, buff, size);
+			if (size < BUFF_SIZE)
+			{
+				read(sockfd, buff, size);
+				write(fd, buff, size);
+			}
+			else
+			{
+				int remains = size % BUFF_SIZE;
+				int data_received = 0;
+
+				#if defined DEBUG_MODE
+					printf("[debug - client]: file '%s', size=%d, remains=%d\n", newpath, size, remains);
+				#endif
+
+				while (data_received < size - remains)
+				{
+					read(sockfd, buff, BUFF_SIZE);
+					write(fd, buff, BUFF_SIZE);
+
+					data_received += BUFF_SIZE;
+				}
+
+				if (remains)
+				{
+					read(sockfd, buff, remains);
+            		write(fd, buff, remains);
+				}
+			}
 
 			if (close(fd) < 0)
 				displayError("close() error.");
@@ -152,9 +174,6 @@ void handle()
 		#if defined DEBUG_MODE
 			printf("[debug - client]: file '%s' successfully updated.\n", newpath);
 		#endif
-
-		if (date)
-    		free(date);
 	}
 
 	/*
@@ -177,7 +196,7 @@ void handle()
 		}
 		else // is a file, remove it
 		{
-			if (strlen(newpath) == strlen(root) + strlen(files_to_delete[i].path) + 1)
+			if (strlen(newpath) == strlen(root) + strlen(files_to_delete[i].path) + 1) //  if absolute path is only rootPath/filePath
 				removefile(newpath);
 		}
 
@@ -236,7 +255,7 @@ int main(int argc, char *argv[])
     root = argv[2];
     clientSetup();
 
-    if (files_to_delete)
+    /*if (files_to_delete)
     	free(files_to_delete);
 
     if (files_to_update)
@@ -244,6 +263,6 @@ int main(int argc, char *argv[])
 
     if (own_files)
         free(own_files);
-
+	*/
     return 0;
 }
