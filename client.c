@@ -53,14 +53,18 @@ void handle()
 	*/
 
 	for (i = 0; i < server_files_count; i++)
+	{
 		read(sockfd, &server_files[i], sizeof(fm));
-
+		printf("%s\n", server_files[i].path);
+	}
+	exit(0);
 	/*
 	* Getting files that need to be updated/deleted.
 	*/
 
 	getFilesToUpdate(server_files, server_files_count);
 	getFilesToDelete(server_files, server_files_count);
+	getDirectoriesToCreate(server_files, server_files_count);
 
 	/*
 	* Telling the server how many files need updated by the client.

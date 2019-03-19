@@ -68,6 +68,7 @@ int isEmptyDirectory(char *dirPath)
 {
     char cmd[1024];
     int status, exitcode;
+
     snprintf(cmd, 1024, "test $(ls -A \"%s\" 2>/dev/null | wc -l) -ne 0", dirPath);
 
     status = system(cmd);
@@ -152,7 +153,7 @@ void getAllFilesMetadata(char *root)
         snprintf(fullpath, PATH_MAX, "%s/%s", root, paths[i]);
         strcpy(own_files[i].path, paths[i]);
         
-        stat(fullpath, &s);
+        lstat(fullpath, &s);
         own_files[i].size = s.st_size;
         own_files[i].timestamp = s.st_mtime;
 		own_files[i].is_regular_file = S_ISDIR(s.st_mode) ? 0 : 1;

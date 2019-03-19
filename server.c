@@ -30,9 +30,12 @@ off_t getFileSize(char *path)
 
 void handleRequest(int connfd)
 {
-    char buff[PATH_MAX], newpath[PATH_MAX];
+    char buff[4096], newpath[PATH_MAX];
     int r, i;
     int files_to_update_cnt;
+
+    getAllFilesPaths(root);
+    getAllFilesMetadata(root);
 
     fm *files_to_update;
 
@@ -44,9 +47,14 @@ void handleRequest(int connfd)
     snprintf(buff, 10, "%d", paths_count);
 	write(connfd, buff, 10);
 
-	for (i = 0; i < paths_count; i++)
+    
+	for (i = 0; i < paths_count; i++) 
+    {
 		write(connfd, &own_files[i], sizeof(fm));
-
+        //printf("%s %d\n", own_files[i].path, own_files[i].size);
+    }
+    
+    exit(0);
     /*
     * Receiving the number of files that need updated on clients' computer.
     */
@@ -164,9 +172,6 @@ void serverSetup()
         printf("binding failed\n");
         exit(EXIT_FAILURE);
     }
-
-    getAllFilesPaths(root);
-    getAllFilesMetadata(root);
 
     listen(sockfd, 5);
     acc();
