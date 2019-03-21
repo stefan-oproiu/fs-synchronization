@@ -108,10 +108,10 @@ void handleRequest(int connfd)
             off_t size = getFileSize(newpath);
 
             #if defined DEBUG_MODE
-                printf("[debug - server]: file '%s', size=%ld\n", newpath, size);
+                printf("[debug - server]: file '%s', size=%lld\n", newpath, size);
             #endif
 
-            snprintf(buff, 12, "%ld", size);
+            snprintf(buff, 12, "%lld", size);
             write(connfd, buff, 12);
 
             if (size < BUFF_SIZE)
@@ -125,7 +125,7 @@ void handleRequest(int connfd)
             	int data_sent = 0;
 
             	#if defined DEBUG_MODE
-					printf("[debug - server]: file '%s', size=%d, remains=%d\n", newpath, size, remains);
+					printf("[debug - server]: file '%s', size=%lld, remains=%d\n", newpath, size, remains);
 				#endif
 
             	while (data_sent < size - remains)
@@ -172,7 +172,7 @@ void acc()
 
         close(connfd);
 
-        while ((wpid = wait(&status)) > 0);
+        //while ((wpid = wait(&status)) > 0);
     }
 }
 
@@ -205,7 +205,7 @@ int main(int argc, char *args[])
         exit(1);
     }   
 
-    // signal(SIGCHLD, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
 
     read_params(args[1]);
     root = args[2];

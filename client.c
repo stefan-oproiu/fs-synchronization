@@ -71,6 +71,10 @@ void handle()
 		printf("[debug - client]: %d files need updated/added\n", ftu_count);
 	#endif
 
+	#if defined DEBUG_MODE
+		printf("[debug - client]: %d files need deleted\n", ftd_count);
+	#endif
+
 	snprintf(buff, 10, "%d", ftu_count);
 	write(sockfd, buff, 10);
 
@@ -130,7 +134,7 @@ void handle()
 				int data_received = 0;
 
 				#if defined DEBUG_MODE
-					printf("[debug - client]: file '%s', size=%d, remains=%d\n", newpath, size, remains);
+					printf("[debug - client]: file '%s', size=%lld, remains=%d\n", newpath, size, remains);
 				#endif
 
 				while (data_received < size - remains)
