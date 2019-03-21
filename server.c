@@ -36,6 +36,9 @@ void handleRequest(int connfd)
 
     fm *files_to_update;
 
+    getAllFilesPaths(root);
+    getAllFilesMetadata(root);
+
     /*
     * Telling the client how many files are ready to be synchronized.
     * Then sending their files to check which of them needs sync.
@@ -189,9 +192,6 @@ void serverSetup()
         printf("binding failed\n");
         exit(EXIT_FAILURE);
     }
-
-    getAllFilesPaths(root);
-    getAllFilesMetadata(root);
 
     listen(sockfd, 5);
     acc();

@@ -130,13 +130,48 @@ void getDirectoriesToCreate(fm *server_files, int sf_count)
 {
     dtc_count = 0;
     int i;
-    dirs_to_create = (fm*)malloc(sizeof(fm));
-    for(i = 0; i < sf_count; i++)
+    dirs_to_create = (fm *)malloc(sizeof(fm));
+    for (i = 0; i < sf_count; i++)
     {
-        if(!server_files[i].is_regular_file)
+        if (!server_files[i].is_regular_file)
         {
-            dirs_to_create = (fm*)realloc(dirs_to_create, sizeof(fm) * (dtc_count++));
+            dirs_to_create = (fm *)realloc(dirs_to_create, sizeof(fm) * (dtc_count++));
             dirs_to_create[dtc_count - 1] = server_files[i];
         }
     }
+}
+
+void constructPath(char *source)
+{
+    char *path = (char *)malloc(strlen(source) + 1);
+    strcpy(path, source);
+    int length = strlen(path);
+    int initial_length = length;
+    while (1)
+    {
+        if (access(path, F_OK) == 0) //if file exists
+            break;
+        while (path[--length] != '/')
+            ;
+        path[length] = '\0';
+    }
+    if (length != initial_length)
+        length += 1;
+    while (length != initial_length)
+    {
+        strcpy(path, source);
+        while ((++length) != initial_length && path[length] != '/')
+            ;
+
+        if (length != initial_length)
+            path[length] = '\0';
+        else
+            break;
+
+        printf("\nPATH: %s\n", path);
+        if (mkdir(path, ACCESSPERMS) < 0)
+            displayError("Error creating path");
+    }
+    if (path)
+        free(path);
 }

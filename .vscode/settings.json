@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "in.h": "c",
-        "common.h": "c"
+        "common.h": "c",
+        "fcntl.h": "c",
+        "time.h": "c"
     }
 }

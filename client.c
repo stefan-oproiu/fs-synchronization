@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -100,6 +101,8 @@ void handle()
 		#if defined DEBUG_MODE
 			printf("[debug - client]: file '%s' is being updated.\n", newpath);
 		#endif
+
+		constructPath(newpath);
 
 		if (!files_to_update[i].is_regular_file) // is a directory
 		{

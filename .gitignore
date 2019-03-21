@@ -1,4 +1,5 @@
 *.exe
 .DS_Store
-hello/
+hello/*
 a.out
+
