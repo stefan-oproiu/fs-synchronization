@@ -62,6 +62,7 @@ void handle()
 
 	getFilesToUpdate(server_files, server_files_count);
 	getFilesToDelete(server_files, server_files_count);
+	getDirectoriesToCreate(server_files, server_files_count, root);
 
 	/*
 	* Telling the server how many files need updated by the client.
@@ -90,6 +91,22 @@ void handle()
 	/*
 	* Updating the files from the server.
 	*/
+
+	for (i = 0; i < dtc_count; i++)
+	{
+		snprintf(newpath, PATH_MAX, "%s/%s", root, dirs_to_create[i].path);
+
+		#if defined DEBUG_MODE
+			printf("[debug - client]: directory '%s' is being created.\n", newpath);
+		#endif
+
+		constructPath(newpath);
+		mkdir(newpath, ACCESSPERMS);
+		char *date = formatdate(dirs_to_create[i].timestamp);
+		adjustTimestamp(newpath, date);
+		if(date)
+			free(date);
+	}
 
 	for (i = 0; i < ftu_count; i++)
 	{
@@ -181,6 +198,8 @@ void handle()
 		#if defined DEBUG_MODE
 			printf("[debug - client]: file '%s' successfully updated.\n", newpath);
 		#endif
+		if(date)
+			free(date);
 	}
 
 	/*

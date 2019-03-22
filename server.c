@@ -153,6 +153,8 @@ void handleRequest(int connfd)
 
     if (files_to_update)
         free(files_to_update);
+    
+    close(connfd);
 
     exit(0);
 }

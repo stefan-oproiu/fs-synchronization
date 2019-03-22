@@ -126,16 +126,18 @@ void getFilesToUpdate(fm *server_files, int sf_count)
     }
 }
 
-void getDirectoriesToCreate(fm *server_files, int sf_count)
+void getDirectoriesToCreate(fm *server_files, int sf_count, char *root)
 {
     dtc_count = 0;
     int i;
     dirs_to_create = (fm *)malloc(sizeof(fm));
     for (i = 0; i < sf_count; i++)
     {
-        if (!server_files[i].is_regular_file)
+        char newpath[PATH_MAX];
+        snprintf(newpath, PATH_MAX, "%s/%s", root, server_files[i].path);
+        if (!server_files[i].is_regular_file && isEmptyDirectory(newpath))
         {
-            dirs_to_create = (fm *)realloc(dirs_to_create, sizeof(fm) * (dtc_count++));
+            dirs_to_create = (fm *)realloc(dirs_to_create, sizeof(fm) * (++dtc_count));
             dirs_to_create[dtc_count - 1] = server_files[i];
         }
     }
