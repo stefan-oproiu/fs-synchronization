@@ -167,7 +167,7 @@ void acc()
 
     len = sizeof(remote_address);
 
-    while ((connfd = accept(sockfd, (struct sockaddr *) &remote_address, &len)) >= 0)
+    while ((connfd = accept(sockfd, (struct sockaddr *) &remote_address, &len)) >= 0) // preia conexiunea din coada + tratare request in proces separat pt fiecare client
     {
         if ((pid = fork()) == 0)
             handleRequest(connfd);
@@ -185,18 +185,18 @@ void serverSetup()
         exit(EXIT_FAILURE);
     }
 
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = inet_addr(ip);
-    server_address.sin_port = htons(port);
+    server_address.sin_family = AF_INET; // TCP/IP
+    server_address.sin_addr.s_addr = inet_addr(ip); // Conversie IP -> IPv4 
+    server_address.sin_port = htons(port); // conversie unsigned short host byte order -> network byte order
 
-    if (bind(sockfd, (struct sockaddr *) &server_address, sizeof(server_address)) < 0)
+    if (bind(sockfd, (struct sockaddr *) &server_address, sizeof(server_address)) < 0) // legare socket la structura server_address
     {
         printf("binding failed\n");
         exit(EXIT_FAILURE);
     }
 
-    listen(sockfd, 5);
-    acc();
+    listen(sockfd, 5); // ready to accept (max 5 cereri in acelasi timp)
+    acc(); 
 }
 
 int main(int argc, char *args[])
@@ -207,7 +207,7 @@ int main(int argc, char *args[])
         exit(1);
     }   
 
-    signal(SIGCHLD, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN); // ignora semnalul SIGCHLD, parintele nu mai preia fiii
 
     read_params(args[1]);
     root = args[2];

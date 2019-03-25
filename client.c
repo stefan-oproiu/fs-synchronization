@@ -101,7 +101,7 @@ void handle()
 		#endif
 
 		constructPath(newpath);
-		mkdir(newpath, ACCESSPERMS);
+		mkdir(newpath, ACCESSPERMS); // 0777
 		char *date = formatdate(dirs_to_create[i].timestamp);
 		adjustTimestamp(newpath, date);
 		if(date)
@@ -179,6 +179,10 @@ void handle()
 		#if defined DEBUG_MODE
 			printf("[debug - client]: timestamp=%s for file %s\n", date, files_to_update[i].path);
 		#endif
+		
+		/*
+		* Updating metadata information.
+		*/
 
 		if ((idx = getPathIndex(newpath)) == -1) // file/dir does not exists in the list => add it
 		{
@@ -198,6 +202,7 @@ void handle()
 		#if defined DEBUG_MODE
 			printf("[debug - client]: file '%s' successfully updated.\n", newpath);
 		#endif
+		
 		if(date)
 			free(date);
 	}

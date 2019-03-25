@@ -17,6 +17,7 @@ typedef struct file_metadata
 int paths_count = 0;
 char paths[1024][PATH_MAX];
 
+// Tablou metadata
 fm *own_files;
 
 char *ip;
@@ -43,6 +44,10 @@ int getPathIndex(char *path)
 
     return -1;
 }
+
+/*
+ * Functie care citeste IP-ul si port-ul din fisierul dat ca parametru in 'path'.
+*/
 
 void read_params(char *path)
 {
